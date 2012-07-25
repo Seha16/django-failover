@@ -95,6 +95,12 @@ class FailoverTestCase(TestCase):
         self.log_handler = FailoverHandler()
         self.logger.addHandler(self.log_handler)
         
+        self.log_capture_handler = LogCaptureHandler()
+        monitor_logger.addHandler(self.log_capture_handler)
+        self.orig_monitor_logger_level = monitor_logger.level
+        monitor_logger.setLevel(logging.INFO)
+        LogCaptureHandler.records = []
+        
     ####################################################################
     
     def setUpDBSlave(self):
@@ -144,6 +150,9 @@ class FailoverTestCase(TestCase):
         failover_settings.OUTAGE_EXCEPTION_CLASSES = self.orig_failover_exception_classes
         
         self.logger.removeHandler(self.log_handler)
+        monitor_logger.removeHandler(self.log_capture_handler)
+        monitor_logger.setLevel(self.orig_monitor_logger_level)
+        LogCaptureHandler.records = []
     
     ####################################################################
     
@@ -366,11 +375,6 @@ class FailoverTestCase(TestCase):
         orig_frequency = ServiceMonitor.OUTAGE_LOGGING_FREQUENCY 
         ServiceMonitor.OUTAGE_LOGGING_FREQUENCY = 1
             
-        # Tie the failover logger to the LogCaptureHandler so we can see what
-        # we're logging.
-        handler = LogCaptureHandler()
-        monitor_logger.addHandler(handler)
-        LogCaptureHandler.records = []
         try:
             # Simulate the outage and run the monitoring
             self.simulate_service_outage(DBSlave)
@@ -385,7 +389,7 @@ class FailoverTestCase(TestCase):
             self.assertEqual(record.levelno, logging.CRITICAL)
             self.assertIn(
                 "{0} outage. Failover initiated.".format(DBSlave.name), 
-                record.message)
+                record.msg)
             
             # Sleep long enough to log the outage again.
             time.sleep(1)
@@ -406,12 +410,10 @@ class FailoverTestCase(TestCase):
             self.assertEqual(record.levelno, logging.INFO)
             self.assertIn(
                 "{0} is back up. Recovery complete.".format(DBSlave.name), 
-                record.message)
+                record.msg)
     
         finally:
             ServiceMonitor.OUTAGE_LOGGING_FREQUENCY = orig_frequency
-            monitor_logger.removeHandler(handler)
-            LogCaptureHandler.records = []
             
     ####################################################################
     
@@ -426,11 +428,6 @@ class FailoverTestCase(TestCase):
         orig_frequency = ServiceMonitor.OUTAGE_LOGGING_FREQUENCY 
         ServiceMonitor.OUTAGE_LOGGING_FREQUENCY = 1
             
-        # Tie the failover logger to the LogCaptureHandler so we can see what
-        # we're logging.
-        handler = LogCaptureHandler()
-        monitor_logger.addHandler(handler)
-        LogCaptureHandler.records = []
         try:
             # Simulate the outage and run the monitoring
             self.simulate_service_outage(Memcached)
@@ -445,7 +442,7 @@ class FailoverTestCase(TestCase):
             self.assertEqual(record.levelno, logging.CRITICAL)
             self.assertIn(
                 "{0} outage. Failover initiated.".format(Memcached.name), 
-                record.message)
+                record.msg)
             
             # Sleep long enough to log the outage again.
             time.sleep(1)
@@ -466,11 +463,9 @@ class FailoverTestCase(TestCase):
             self.assertEqual(record.levelno, logging.INFO)
             self.assertIn(
                 "{0} is back up. Recovery complete.".format(Memcached.name), 
-                record.message)
+                record.msg)
     
         finally:
             ServiceMonitor.OUTAGE_LOGGING_FREQUENCY = orig_frequency
-            monitor_logger.removeHandler(handler)
-            LogCaptureHandler.records = []
             
 ####################################################################
