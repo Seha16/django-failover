@@ -10,7 +10,7 @@ from django.db import connections
 from django.utils.unittest import skipUnless
 from services.db import Database
 from monitor import ServiceMonitor, logger as monitor_logger
-from log import FailoverHandler, ServiceOutageExceptionsFilter
+from log import FailoverHandler
 import settings as failover_settings
 import datetime
 import socket
@@ -76,13 +76,13 @@ class FailoverTestCase(TestCase):
         
         for service_class in ServiceMonitor.services:
             self.patch_ping(service_class)
-            # Set ping intervals to 0 (ping every time)
-            service_class._orig_monitoring_interval = service_class.MONITORING_RETRY_INTERVAL
-            service_class._orig_outage_interval = service_class.OUTAGE_RETRY_INTERVAL
-            service_class._orig_error_interval = service_class.ERROR_RETRY_INTERVAL
-            service_class.MONITORING_RETRY_INTERVAL = 0
-            service_class.OUTAGE_RETRY_INTERVAL = 0
-            service_class.ERROR_RETRY_INTERVAL = 0
+            # Set ping frequencies to 0 (ping every time)
+            service_class._orig_monitoring_frequency = service_class.MONITORING_PING_FREQUENCY
+            service_class._orig_outage_frequency = service_class.OUTAGE_PING_FREQUENCY
+            service_class._orig_error_frequency = service_class.ERROR_PING_FREQUENCY
+            service_class.MONITORING_PING_FREQUENCY = 0
+            service_class.OUTAGE_PING_FREQUENCY = 0
+            service_class.ERROR_PING_FREQUENCY = 0
        
         # Register socket.error as an exception class that should trigger
         # monitoring.
@@ -93,7 +93,6 @@ class FailoverTestCase(TestCase):
         self.logger = logging.getLogger("failover_test")
         self.logger.setLevel(logging.ERROR)
         self.log_handler = FailoverHandler()
-        self.log_handler.addFilter(ServiceOutageExceptionsFilter())
         self.logger.addHandler(self.log_handler)
         
     ####################################################################
@@ -124,12 +123,12 @@ class FailoverTestCase(TestCase):
             service_class.ping = service_class._orig_ping
             delattr(service_class, "_orig_ping")
             delattr(service_class, "pings")
-            service_class.MONITORING_RETRY_INTERVAL = service_class._orig_monitoring_interval
-            service_class.OUTAGE_RETRY_INTERVAL = service_class._orig_outage_interval
-            service_class.ERROR_RETRY_INTERVAL = service_class._orig_error_interval
-            delattr(service_class, "_orig_monitoring_interval")
-            delattr(service_class, "_orig_outage_interval")
-            delattr(service_class, "_orig_error_interval")
+            service_class.MONITORING_PING_FREQUENCY = service_class._orig_monitoring_frequency
+            service_class.OUTAGE_PING_FREQUENCY = service_class._orig_outage_frequency
+            service_class.ERROR_PING_FREQUENCY = service_class._orig_error_frequency
+            delattr(service_class, "_orig_monitoring_frequency")
+            delattr(service_class, "_orig_outage_frequency")
+            delattr(service_class, "_orig_error_frequency")
             
             # Clear the last_ping from each service class so as not to impact the
             # next test.
@@ -306,11 +305,11 @@ class FailoverTestCase(TestCase):
         
     ####################################################################
     
-    def test_ping_monitoring_interval(self):
+    def test_ping_monitoring_frequency(self):
         """
-        Tests the ping interval during normal monitoring.
+        Tests the ping frequency during normal monitoring.
         """
-        DBSlave.MONITORING_RETRY_INTERVAL = 1
+        DBSlave.MONITORING_PING_FREQUENCY = 1
         for i in range(3):
             ServiceMonitor.monitor()
                 
@@ -321,14 +320,14 @@ class FailoverTestCase(TestCase):
     
     ####################################################################
     
-    def test_ping_outage_interval(self):
+    def test_ping_outage_frequency(self):
         """
-        Tests the ping interval during an outage.
+        Tests the ping frequency during an outage.
         """
         self.simulate_service_outage(DBSlave)
         
-        DBSlave.MONITORING_RETRY_INTERVAL = 3
-        DBSlave.OUTAGE_RETRY_INTERVAL = 0
+        DBSlave.MONITORING_PING_FREQUENCY = 3
+        DBSlave.OUTAGE_PING_FREQUENCY = 0
         
         for i in range(3):
             ServiceMonitor.monitor()
@@ -340,16 +339,16 @@ class FailoverTestCase(TestCase):
             
     ####################################################################
     
-    def test_ping_error_interval(self):
+    def test_ping_error_frequency(self):
         """
-        Tests the ping interval when an error is passed to the
+        Tests the ping frequency when an error is passed to the
         ServiceMonitor.
         """
         self.simulate_service_outage(DBSlave)
        
-        DBSlave.MONITORING_RETRY_INTERVAL = 3
-        DBSlave.OUTAGE_RETRY_INTERVAL = 3
-        DBSlave.ERROR_RETRY_INTERVAL= 0
+        DBSlave.MONITORING_PING_FREQUENCY = 3
+        DBSlave.OUTAGE_PING_FREQUENCY = 3
+        DBSlave.ERROR_PING_FREQUENCY= 0
         for i in range(3):
             ServiceMonitor.monitor(exception=socket.error())
             
@@ -364,8 +363,8 @@ class FailoverTestCase(TestCase):
         discovered, and periodically thereafter, and that the recovery is
         also logged.
         """
-        orig_interval = ServiceMonitor.OUTAGE_LOGGING_INTERVAL 
-        ServiceMonitor.OUTAGE_LOGGING_INTERVAL = 1
+        orig_frequency = ServiceMonitor.OUTAGE_LOGGING_FREQUENCY 
+        ServiceMonitor.OUTAGE_LOGGING_FREQUENCY = 1
             
         # Tie the failover logger to the LogCaptureHandler so we can see what
         # we're logging.
@@ -410,7 +409,7 @@ class FailoverTestCase(TestCase):
                 record.message)
     
         finally:
-            ServiceMonitor.OUTAGE_LOGGING_INTERVAL = orig_interval
+            ServiceMonitor.OUTAGE_LOGGING_FREQUENCY = orig_frequency
             monitor_logger.removeHandler(handler)
             LogCaptureHandler.records = []
             
@@ -424,8 +423,8 @@ class FailoverTestCase(TestCase):
         to test Memcached is to make sure an outage notification and recovery
         notification are sent.
         """
-        orig_interval = ServiceMonitor.OUTAGE_LOGGING_INTERVAL 
-        ServiceMonitor.OUTAGE_LOGGING_INTERVAL = 1
+        orig_frequency = ServiceMonitor.OUTAGE_LOGGING_FREQUENCY 
+        ServiceMonitor.OUTAGE_LOGGING_FREQUENCY = 1
             
         # Tie the failover logger to the LogCaptureHandler so we can see what
         # we're logging.
@@ -470,7 +469,7 @@ class FailoverTestCase(TestCase):
                 record.message)
     
         finally:
-            ServiceMonitor.OUTAGE_LOGGING_INTERVAL = orig_interval
+            ServiceMonitor.OUTAGE_LOGGING_FREQUENCY = orig_frequency
             monitor_logger.removeHandler(handler)
             LogCaptureHandler.records = []
             

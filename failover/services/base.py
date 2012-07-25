@@ -21,11 +21,11 @@ class Service(object):
     name = None
 
     # ping frequency during normal monitoring
-    MONITORING_RETRY_INTERVAL = getattr(settings, "FAILOVER_MONITORING_RETRY_INTERVAL", 120)
+    MONITORING_PING_FREQUENCY = getattr(settings, "FAILOVER_MONITORING_PING_FREQUENCY", 120)
     # ping frequency during outages
-    OUTAGE_RETRY_INTERVAL = getattr(settings, "FAILOVER_OUTAGE_RETRY_INTERVAL", 30)
+    OUTAGE_PING_FREQUENCY = getattr(settings, "FAILOVER_OUTAGE_PING_FREQUENCY", 30)
     # ping frequency when an error occurs that might indicate an outage
-    ERROR_RETRY_INTERVAL = getattr(settings, "FAILOVER_ERROR_RETRY_INTERVAL", 5)
+    ERROR_PING_FREQUENCY = getattr(settings, "FAILOVER_ERROR_PING_FREQUENCY", 5)
     
     last_ping = None
     

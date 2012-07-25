@@ -26,7 +26,7 @@ class ServiceMonitor(object):
     ServiceMonitor is persistent within the process space.
     """
     # Min seconds to wait before re-logging an outage
-    OUTAGE_LOGGING_INTERVAL = settings.OUTAGE_LOGGING_INTERVAL
+    OUTAGE_LOGGING_FREQUENCY = settings.OUTAGE_LOGGING_FREQUENCY
 
     services = set()
     outages = set()
@@ -51,7 +51,7 @@ class ServiceMonitor(object):
         
         If outages_only is True, only services that are currently down will
         be pinged. If an exception is provided, the monitoring will use the
-        ERROR_RETRY_INTERVAL for the service.
+        ERROR_PING_FREQUENCY for the service.
         """
         for service_class in cls.services:
             service = service_class()
@@ -60,16 +60,16 @@ class ServiceMonitor(object):
                 continue
             
             if exception:
-                retry_interval = service_class.ERROR_RETRY_INTERVAL
+                ping_frequency = service_class.ERROR_PING_FREQUENCY
             elif service_class in cls.outages:
-                retry_interval = service_class.OUTAGE_RETRY_INTERVAL
+                ping_frequency = service_class.OUTAGE_PING_FREQUENCY
             else:
-                retry_interval = service_class.MONITORING_RETRY_INTERVAL
+                ping_frequency = service_class.MONITORING_PING_FREQUENCY
               
             # If it's not time to re-ping yet, continue 
             if (service_class.last_ping
                 and service_class.last_ping > datetime.datetime.now() - datetime.timedelta(
-                    seconds=retry_interval)):
+                    seconds=ping_frequency)):
                 continue
             
             try:
@@ -87,7 +87,7 @@ class ServiceMonitor(object):
                 if (
                     service_class.outage_last_notified is None
                     or service_class.outage_last_notified <= datetime.datetime.now() - datetime.timedelta(
-                        seconds=cls.OUTAGE_LOGGING_INTERVAL)):
+                        seconds=cls.OUTAGE_LOGGING_FREQUENCY)):
                     
                     service_class.outage_last_notified = datetime.datetime.now()
                     logger.critical(

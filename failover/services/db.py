@@ -13,8 +13,8 @@ from django.db import connections
 class Database(Service):
     
     name = "database"
-    DB_ALIAS = None
-    FAILOVER_DB_ALIAS = None
+    DB_ALIAS = "slave"
+    FAILOVER_DB_ALIAS = "default"
     connection = None
     
     def __init__(self):

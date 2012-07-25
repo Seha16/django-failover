@@ -25,6 +25,9 @@ class FailoverHandler(logging.Handler):
     """Logging handler that runs the service monitor to check for outages and
     failover if necessary.
     """
+    def __init__(self, *args, **kwargs):
+        logging.Handler.__init__(self, *args, **kwargs)
+        self.addFilter(ServiceOutageExceptionsFilter())
     
     def emit(self, record):
         from monitor import ServiceMonitor
