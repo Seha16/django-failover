@@ -28,7 +28,7 @@ setup(name="django-failover",
       url="https://github.com/brianjaystanley/django-failover",
       author_email="brian@brianjaystanley.com",
       license="MIT",
-      packages=["failover"],
+      packages=["failover", "failover.services"],
       install_requires=["django",],
 )
 
