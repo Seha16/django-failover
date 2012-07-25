@@ -11,7 +11,7 @@ version = "0.1.0"
 
 setup(name="django-failover",
       version=version,
-      description="failover app for Django",
+      description="automatic failover for Django",
       long_description=open("README.rst").read(),
       classifiers=[
           "Development Status :: 4 - Beta",
