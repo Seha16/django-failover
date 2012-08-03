@@ -48,11 +48,14 @@ class Database(Service):
         self.RECOVERY_SETTINGS[self.DB_ALIAS] = settings.DATABASES[self.DB_ALIAS]
         settings.DATABASES[self.DB_ALIAS] = settings.DATABASES[self.FAILOVER_DB_ALIAS]
         self.reload_settings()
+        super(Database, self).failover()
         
     def recover(self):
         connections[self.DB_ALIAS].close()
         settings.DATABASES[self.DB_ALIAS] = self.RECOVERY_SETTINGS[self.DB_ALIAS]         
+        del self.RECOVERY_SETTINGS[self.DB_ALIAS]
         self.reload_settings()
+        super(Database, self).recover()
         
 ########################################################################
 
