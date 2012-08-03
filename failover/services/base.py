@@ -31,6 +31,9 @@ class Service(object):
     
     outage = False
     outage_last_notified = None
+
+    # A middleware class that should run when the service is down.
+    outage_middleware_class = None
     
     SOCKET_PROTOCOL = socket.AF_INET
     SOCKET_HOST = None

@@ -102,7 +102,14 @@ behavior:
     Like ``MONITORING_PING_FREQUENCY``, but applies when monitoring is
     triggered by an exception. Default:
     ``settings.FAILOVER_ERROR_PING_FREQUENCY`` (or ``5`` if undefined).
-
+    
+``Service.outage_middleware_class``
+    You can assign a middleware class to this attribute and that middleware
+    will run when the service goes down (assuming you're using
+    ``django-failover``'s middleware). The middleware may define
+    ``process_request`` and/or ``process_view`` methods. This could be useful
+    if you wanted to close down some sections of your site during the outage.
+    Default: ``None``.
 
 ``django-failover`` provides a few ready-to-use service classes.
 

@@ -11,6 +11,7 @@ from django.utils.unittest import skipUnless
 from services.db import Database
 from monitor import ServiceMonitor, logger as monitor_logger
 from log import FailoverHandler
+from middleware import FailoverMiddleware
 import settings as failover_settings
 import datetime
 import socket
@@ -468,4 +469,47 @@ class FailoverTestCase(TestCase):
         finally:
             ServiceMonitor.OUTAGE_LOGGING_FREQUENCY = orig_frequency
             
+    ################################################################
+    
+    def test_outage_middleware(self):
+        """Tests that middleware, if defined for a service class, is run
+        during the outage.
+        """
+        
+        # Define and assign middleware
+        class OutageMiddleware(object):
+            process_request_runs = 0
+            process_view_runs = 0
+            
+            def process_request(self, *args, **kwargs):
+                self.__class__.process_request_runs += 1
+            
+            def process_view(self, *args, **kwargs):
+                self.__class__.process_view_runs += 1
+                
+        DBSlave.outage_middleware_class = OutageMiddleware
+        
+        # Simulate outage
+        ServiceMonitor.outages.add(DBSlave)
+        
+        # Run FailoverMiddleware
+        failover_middleware = FailoverMiddleware()
+        failover_middleware.process_request(None)
+        failover_middleware.process_view(None, None, None, None)
+        
+        # Verify the results.
+        self.assertEqual(OutageMiddleware.process_request_runs, 1)
+        self.assertEqual(OutageMiddleware.process_view_runs, 1)
+        
+        # Simulate recovery
+        ServiceMonitor.outages.remove(DBSlave)
+        
+        # Run FailoverMiddleware
+        failover_middleware.process_request(None)
+        failover_middleware.process_view(None, None, None, None)
+        
+        # Verify the results (shouldn't have run a second time).
+        self.assertEqual(OutageMiddleware.process_request_runs, 1)
+        self.assertEqual(OutageMiddleware.process_view_runs, 1)
+        
 ####################################################################
