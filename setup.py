@@ -29,7 +29,7 @@ setup(name="django-failover",
       author_email="brian@brianjaystanley.com",
       license="MIT",
       packages=["failover", "failover.services"],
-      install_requires=["django == 1.3",],
+      install_requires=["django >= 1.3, < 1.5",],
 )
 
 
